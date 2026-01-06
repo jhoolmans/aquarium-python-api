@@ -387,7 +387,7 @@ class Item(Entity):
             includeMembers=includeMembers
         )
 
-        if sort != None:
+        if sort is not None:
             params['sort'] = sort
 
         jsonify(params)
@@ -395,6 +395,31 @@ class Item(Entity):
         result = self.do_request('GET', 'items/{0}/permissions'.format(
             self._key), params=params)
         result = [self.parent.element(data) for data in result]
+        return result
+
+    def get_permissions_flat(self, account_key=None):
+        """
+        Get the list of users and their access to an item.
+
+        :param     account_key:  The _key of the account to flat its permissions (optional). If no account_key provided, current user is used.
+        :type      account_key:  string
+
+        .. tip::
+            Possible returned permissions are the same as :func:`~aquarium.item.Item.create_permission`
+
+        :returns:  a dict with { permissions: str, direct: list of permission edges, indirect: list of permission edges }
+        :rtype:    dict
+        """
+        params = dict()
+
+        if account_key is not None:
+            params["accountKey"] = account_key
+
+        jsonify(params)
+
+        result = self.do_request(
+            "GET", "items/{0}/permissions/flat".format(self._key), params=params
+        )
         return result
 
     def create_permission(self, participant_key, permissions, propagate = True):
