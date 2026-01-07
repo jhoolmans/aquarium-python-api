@@ -134,11 +134,11 @@ class Aquarium(object):
         if 'decoding' in kwargs:
             decoding=kwargs.pop('decoding')
 
-        headers=None
+        headers = {}
         if 'headers' in kwargs:
             headers=kwargs.pop('headers')
-            if headers is not None:
-                headers.update(dict(authorization=token))
+
+        headers.update({"Authorization": f"Bearer {token}"})
 
         args=list(args)
         typ=args[0]
@@ -161,7 +161,6 @@ class Aquarium(object):
             typ,
             path,
             headers=headers,
-            auth=(self.token or "", self.domain or ""),
             **kwargs,
         )
 
