@@ -43,7 +43,7 @@ class Events(object):
             'Connection': 'keep-alive'
         }
 
-    def listen(self):
+    async def listen(self):
         """
         Connect and starts streaming events from the server.
 
@@ -55,7 +55,11 @@ class Events(object):
         if self.last_timestamp:
             self.headers['last-event-id'] = self.last_timestamp
 
-        self.stream = self.parent.do_request('GET', '/events/stream', headers=self.headers, stream=True, decoding=False)
+        # TODO: Change to httpx.stream using the async client instead.
+        # See: https://www.python-httpx.org/async/#streaming-responses
+        self.stream = await self.parent.do_request(
+            "GET", "/events/stream", headers=self.headers, stream=True, decoding=False
+        )
         self.stream_iterator = self._iter_content()
 
         encoding = self.stream.encoding or self.stream.apparent_encoding
@@ -63,7 +67,7 @@ class Events(object):
 
         return self
 
-    def start(self):
+    async def start(self):
         """
         Starts processing events and trigger the callbacks.
         """
@@ -72,21 +76,21 @@ class Events(object):
         for event in self:
             # Trigger callback for the exact event topic
             for callback in self.listeners.get(event.topic, []):
-                callback(event)
+                await callback(event)
 
             # Trigger callback for the event native topic
             topic = '{category}.{verb}'.format(category=event._category, verb=event._verb)
             for callback in self.listeners.get(topic, []):
-                callback(event)
+                await callback(event)
 
             # Trigger callback for the event root topic's category
             for callback in self.listeners.get(event._category, []):
-                callback(event)
+                await callback(event)
 
 
             # Trigger callback for all events
             for callback in self.listeners.get('*', []):
-                callback(event)
+                await callback(event)
 
     def stop(self):
         """
@@ -214,7 +218,7 @@ class _Callback(object):
         """
         self.callback=callback
 
-    def __call__(self, event):
+    async def __call__(self, event):
         """
         Callable to execute the callback
 
@@ -222,7 +226,7 @@ class _Callback(object):
         :type       event:  Event object
         """
         if self.callback:
-            self.callback(event)
+            await self.callback(event)
 
 class Event(Entity):
     """
@@ -337,7 +341,7 @@ class Event(Entity):
         if topicMatched.group('verb'):
             self._verb = topicMatched.group('verb')
 
-    def do_request(self, *args, **kwargs):
+    async def do_request(self, *args, **kwargs):
         """
         Execute a request
 
@@ -349,7 +353,7 @@ class Event(Entity):
         :returns:   request response
         :rtype:  list or dictionary
         """
-        result=self.parent.do_request(*args, **kwargs)
+        result = await self.parent.do_request(*args, **kwargs)
         return result
 
     @classmethod
@@ -387,7 +391,7 @@ class Event(Entity):
 
         return event
 
-    def get(self):
+    async def get(self):
         """
         Get the event
 
@@ -395,13 +399,13 @@ class Event(Entity):
         :rtype:     Event object
         """
         if (self._key):
-            event = self.do_request('GET', 'events/{key}'.format(key=self._key))
+            event = await self.do_request("GET", "events/{key}".format(key=self._key))
             self.set_data_variables(event)
             return self
         else:
             raise ValueError('The event has no key, so it is not possible to get it')
 
-    def get_context(self):
+    async def get_context(self):
         """
         Get the context of the event up to the project
 
@@ -422,7 +426,7 @@ class Event(Entity):
             payload['query'] = "# <($Child, 10)- 0,1 item.type IN ['Project'] AND path.vertices[*].type NONE == 'User' SORT null VIEW $view"
             endpoint = '{emittedFrom}/traverse'.format(emittedFrom=self.emittedFrom)
 
-        context = self.do_request('POST', endpoint, json=payload)
+        context = await self.do_request("POST", endpoint, json=payload)
         print(payload['query'])
         if (context and len(context) > 0):
             return {

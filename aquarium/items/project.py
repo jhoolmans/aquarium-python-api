@@ -7,7 +7,7 @@ class Project(Item):
     This class describes a project object child of Item class
     """
 
-    def get_all(self, show_all=False):
+    async def get_all(self, show_all=False):
         """
         Gets all projects accessible by the connected user
 
@@ -24,11 +24,11 @@ class Project(Item):
             query.append('AND item.data.completion != 1 AND item.data.completion != -1 AND NOT (<($Trash)- *)')
 
         query.append('SORT item.data.name ASC')
-        result = self.parent.query(meshql=' '.join(query))
+        result = await self.parent.query(meshql=" ".join(query))
         result = [self.parent.cast(data) for data in result]
         return result
 
-    def get_shots(self):
+    async def get_shots(self):
         """
         Gets all the shots of the project
 
@@ -43,11 +43,11 @@ class Project(Item):
                 "tasks": '# -($Child)> $Task VIEW item'
             }
         }
-        result = self.traverse(meshql=query, aliases=aliases)
+        result = await self.traverse(meshql=query, aliases=aliases)
         result = [self.parent.element(data) for data in result]
         return result
 
-    def get_assets(self):
+    async def get_assets(self):
         """
         Gets all the assets of the project
 
@@ -62,11 +62,11 @@ class Project(Item):
                 "tasks": '# -($Child)> $Task VIEW item'
             }
         }
-        result = self.traverse(meshql=query, aliases=aliases)
+        result = await self.traverse(meshql=query, aliases=aliases)
         result = [self.parent.element(data) for data in result]
         return result
 
-    def get_properties(self):
+    async def get_properties(self):
         """
         Gets all the properties of the project
 
@@ -75,11 +75,11 @@ class Project(Item):
         """
 
         query = "# -($Child)> $Properties"
-        result = self.traverse(meshql=query)
+        result = await self.traverse(meshql=query)
         result = [self.parent.element(data) for data in result]
         return result
 
-    def get_statuses(self):
+    async def get_statuses(self):
         """
         Gets the statuses of the project
 
@@ -88,11 +88,14 @@ class Project(Item):
         """
         statuses_dct = dict()
 
-        statuses = self.traverse(meshql="# -($Child)> $Properties AND item.data.tasks_status != null SORT null VIEW item.data.tasks_status")
+        statuses = await self.traverse(
+            meshql="# -($Child)> $Properties AND item.data.tasks_status != null SORT null VIEW item.data.tasks_status"
+        )
         for status in statuses:
-            if status:
-                name = status.get('status')
-                if name not in statuses_dct:
-                    statuses_dct[name] = status
+            if not status:
+                continue
+            name = status.get("status")
+            if name not in statuses_dct:
+                statuses_dct[name] = status
         result = statuses_dct or DEFAULT_STATUSES
         return result

@@ -9,7 +9,7 @@ class Playlist(Item):
     This class describes a Playlist object child of Item class.
     """
 
-    def get_medias(self, track=None):
+    async def get_medias(self, track=None):
         """
         Gets the medias of the playlist
 
@@ -21,7 +21,7 @@ class Playlist(Item):
         """
 
         filter = ''
-        if track != None:
+        if track is not None:
             filter = 'AND edge.data.track == {0}'.format(track)
 
         query = '# -($Child OR $Playlist)> 0,5000 $Media {0} UNIQUE SORT edge.createdAt ASC VIEW $view'.format(
@@ -34,11 +34,11 @@ class Playlist(Item):
             }
         }
 
-        result=self.traverse(meshql=query, aliases=aliases)
+        result = await self.traverse(meshql=query, aliases=aliases)
         result=[self.parent.element(data) for data in result]
         return result
 
-    def get_playlists(self):
+    async def get_playlists(self):
         """
         Gets the playlists added in this playlist
 
@@ -48,11 +48,11 @@ class Playlist(Item):
 
         query = '# -($Child)> $Playlist VIEW item'
 
-        result=self.traverse(meshql=query)
+        result = await self.traverse(meshql=query)
         result = [self.parent.cast(item) for item in result]
         return result
 
-    def import_medias(self, media_paths, track=0):
+    async def import_medias(self, media_paths, track=0):
         """
         Import media files into the playlist
 
@@ -74,12 +74,12 @@ class Playlist(Item):
             edge_data = {
                 'track': track
             }
-            media = self.append(type='Media', path=file, edge_data=edge_data)
+            media = await self.append(type="Media", path=file, edge_data=edge_data)
             medias.append(media.item)
 
         return medias
 
-    def add_playlist(self, playlist_key):
+    async def add_playlist(self, playlist_key):
         """
         Add an existing playlist into the current playlist
 
@@ -90,9 +90,11 @@ class Playlist(Item):
         :rtype:     :class:`~aquarium.edge.Edge`
         """
 
-        return self.parent.edge.create(type='Child', from_key=self._key, to_key=str(playlist_key))
+        return await self.parent.edge.create(
+            type="Child", from_key=self._key, to_key=str(playlist_key)
+        )
 
-    def remove_media(self, media_key):
+    async def remove_media(self, media_key):
         """
         Remove media from the playlist
 
@@ -104,13 +106,13 @@ class Playlist(Item):
         """
 
         query = '# -($Child OR $Playlist)> 0,1 $Media AND item._key == "{0}" VIEW edge'.format(media_key)
-        media_edge = self.traverse(meshql=query)
+        media_edge = await self.traverse(meshql=query)
 
         if len(media_edge) > 0:
             edge = self.parent.cast(media_edge[0])
-            edge.delete()
+            await edge.delete()
 
-    def remove_playlist(self, playlist_key):
+    async def remove_playlist(self, playlist_key):
         """
         Remove the imported playlist from the current playlist
 
@@ -122,13 +124,13 @@ class Playlist(Item):
         """
 
         query = '# -($Child OR $Playlist)> 0,1 $Playlist AND item._key == "{0}" VIEW edge'.format(playlist_key)
-        playlist_edge = self.traverse(meshql=query)
+        playlist_edge = await self.traverse(meshql=query)
 
         if len(playlist_edge) > 0:
             edge = self.parent.cast(playlist_edge[0])
-            edge.delete()
+            await edge.delete()
 
-    def change_media_track(self, media_key, track=0):
+    async def change_media_track(self, media_key, track=0):
         """
         Move the media to another track
 
@@ -142,12 +144,12 @@ class Playlist(Item):
         """
 
         query = '# -($Child OR $Playlist)> 0,1 $Media AND item._key == "{0}" VIEW edge'.format(media_key)
-        media_edge = self.traverse(meshql=query)
+        media_edge = await self.traverse(meshql=query)
 
         if len(media_edge) > 0:
             edge = self.parent.cast(media_edge[0])
             data = {
                 'track': track
             }
-            edge.update_data(data=data)
+            await edge.update_data(data=data)
 

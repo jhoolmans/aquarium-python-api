@@ -8,7 +8,16 @@ class Asset(Item):
     This class describes an Asset object child of Item class.
     """
 
-    def upload_on_task(self, task_name='', path=None, data={}, version_name=None, override_media = True, message = None, encoded = False):
+    async def upload_on_task(
+        self,
+        task_name="",
+        path=None,
+        data={},
+        version_name=None,
+        override_media=True,
+        message=None,
+        encoded=False,
+    ):
         """
         Uploads new media version on asset task
 
@@ -46,20 +55,22 @@ class Asset(Item):
             }
         }
 
-        tasks=self.traverse(meshql=query, aliases=aliases)
+        tasks = await self.traverse(meshql=query, aliases=aliases)
         if not tasks or len(tasks) == 0:
             raise RuntimeError('Could not find task with name "{0}" on item "{1}"'.format(task_name, self._key))
 
         media_key = tasks[0].get('mediaKey')
         task = self.parent.cast(tasks[0]['item'])
 
-        if version_name == None:
-            if not media_key or override_media == False:
+        if version_name is None:
+            if not media_key or not override_media:
                 return task.append(type='Media', data=data, path=path, encoded=encoded)
             else:
-                return self.parent.item(media_key).upload_file(path=path, data=data, message=message, encoded=encoded)
+                return await self.parent.item(media_key).upload_file(
+                    path=path, data=data, message=message, encoded=encoded
+                )
         else:
-            versions = task.get_children(types='Version', names=version_name)
+            versions = await task.get_children(types="Version", names=version_name)
 
             if len(versions) > 0:
                 version = versions[0].item
@@ -68,7 +79,7 @@ class Asset(Item):
                     type='Version', data=dict(name=version_name)).item
 
             if override_media:
-                medias = version.get_children(types='Media')
+                medias = await version.get_children(types="Media")
 
                 if len(medias) > 0:
                     existing_medias = [media for media in medias if media.item.data.originalname == mediaName]
@@ -77,17 +88,23 @@ class Asset(Item):
                             return existing_medias[0]
 
                         media = existing_medias[0].item
-                        return media.upload_file(
-                            path=path, data=data, message=message, encoded=encoded)
+                        return await media.upload_file(
+                            path=path, data=data, message=message, encoded=encoded
+                        )
                     else:
-                        return version.append(type='Media', data=data, path=path, encoded=encoded)
+                        return await version.append(
+                            type="Media", data=data, path=path, encoded=encoded
+                        )
                 else:
-                    return version.append(type='Media', data=data, path=path, encoded=encoded)
+                    return await version.append(
+                        type="Media", data=data, path=path, encoded=encoded
+                    )
             else:
-                return version.append(type='Media', data=data, path=path, encoded=encoded)
+                return await version.append(
+                    type="Media", data=data, path=path, encoded=encoded
+                )
 
-
-    def get_tasks(self, task_name='', task_status=''):
+    async def get_tasks(self, task_name="", task_status=""):
         """
         Gets the tasks of the asset
 
@@ -105,11 +122,11 @@ class Asset(Item):
         if task_status:
             query+=" AND item.data.status == '{0}'".format(task_status)
 
-        result=self.traverse(meshql=query)
+        result = await self.traverse(meshql=query)
         result=[self.parent.element(data) for data in result]
         return result
 
-    def get_assigned_tasks(self, user_key= '', task_name='', task_status=''):
+    async def get_assigned_tasks(self, user_key="", task_name="", task_status=""):
         """
         Gets the asset's assigned tasks to specific user
 
@@ -132,11 +149,13 @@ class Asset(Item):
 
         query+=" AND -($Assigned)> item._key == '{0}'".format(user_key)
 
-        result=self.traverse(meshql=query)
+        result = await self.traverse(meshql=query)
         result=[self.parent.element(data) for data in result]
         return result
 
-    def get_by_task(self, project_key='', task_status='', task_name='', task_completed=False):
+    async def get_by_task(
+        self, project_key="", task_status="", task_name="", task_completed=False
+    ):
 
         """
         Gets project tasks by filters.
@@ -167,6 +186,6 @@ class Asset(Item):
 
         query="# $Asset AND {0} AND {1}".format(' '.join(project), ' '.join(task))
 
-        result=self.parent.query(meshql=query)
+        result = await self.parent.query(meshql=query)
         result=[self.parent.element(data) for data in result]
         return result

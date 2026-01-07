@@ -28,7 +28,7 @@ class Edge(Entity):
         self._from = data.get('_from', '')
         self._to = data.get('_to', '')
 
-    def create(self, type='', from_key='', to_key='', data={}):
+    async def create(self, type="", from_key="", to_key="", data={}):
         """
         Create an edge
 
@@ -52,11 +52,11 @@ class Edge(Entity):
                        type=type,
                        data=data)
 
-        result = self.do_request('POST', 'edges', json=payload)
+        result = await self.do_request("POST", "edges", json=payload)
         result = self.parent.cast(result)
         return result
 
-    def replace_data(self, data={}):
+    async def replace_data(self, data={}):
         """
         Replace the edge data with new ones
 
@@ -71,12 +71,11 @@ class Edge(Entity):
         :rtype:     :class:`~aquarium.edge.Edge`
         """
         data = dict(data=data)
-        result = self.do_request(
-            'PUT', 'edges/'+self._key, json=data)
+        result = await self.do_request("PUT", "edges/" + self._key, json=data)
         result = self.parent.cast(result)
         return result
 
-    def update_data(self, data={}, deep_merge=True):
+    async def update_data(self, data={}, deep_merge=True):
         """
         Update the edge data by merging the existing ones with the new ones
 
@@ -92,12 +91,11 @@ class Edge(Entity):
             data=data,
             deepMerge=deep_merge
         )
-        result = self.do_request(
-            'PATCH', 'edges/'+self._key, json=data)
+        result = await self.do_request("PATCH", "edges/" + self._key, json=data)
         result = self.parent.cast(result)
         return result
 
-    def get(self, populate=False):
+    async def get(self, populate=False):
         """
         Get the edge by its _key
 
@@ -107,12 +105,13 @@ class Edge(Entity):
         :returns:   Edge object
         :rtype:     :class:`~aquarium.edge.Edge`
         """
-        result = self.do_request(
-            'GET', 'edges/{0}/?populate={1}'.format(self._key, to_string_url(populate)))
+        result = await self.do_request(
+            "GET", "edges/{0}/?populate={1}".format(self._key, to_string_url(populate))
+        )
         result = self.parent.cast(result)
         return result
 
-    def delete(self):
+    async def delete(self):
         """
         Delete the edge
 
@@ -122,5 +121,5 @@ class Edge(Entity):
         :returns:   Deleted edge object from API
         :rtype:     dictionary
         """
-        result = self.do_request('DELETE', 'edges/' + self._key)
+        result = await self.do_request("DELETE", "edges/" + self._key)
         return result

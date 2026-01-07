@@ -2,7 +2,6 @@
 import os
 import mimetypes
 
-from .auth import AquariumAuth
 from .events import Events
 from .item import Item
 from .edge import Edge
@@ -22,15 +21,15 @@ from .events import Event
 from .utils import Utils
 
 
-import requests
+import httpx
 
 import sys
+
 if sys.version_info[0] > 2:
     from urllib.parse import urljoin, urlparse
 else:
     from urlparse import urljoin, urlparse
 
-import json
 import logging
 logger=logging.getLogger(__name__)
 
@@ -86,7 +85,7 @@ class Aquarium(object):
         Constructs a new instance.
         """
         # Session
-        self.session=requests.Session()
+        self.session = httpx.AsyncClient(follow_redirects=True)
 
         self.api_url=api_url
         self.api_version=api_version
@@ -113,7 +112,7 @@ class Aquarium(object):
         self.asset=Asset(parent=self)
         self.event=Event(parent=self)
 
-    def do_request(self, *args, **kwargs):
+    async def do_request(self, *args, **kwargs):
         """
         Execute a request to the API
 
@@ -158,7 +157,13 @@ class Aquarium(object):
             path = urljoin(path, self.api_version)
 
         logger.debug('Send request : %s %s', typ, path)
-        response=self.session.request(typ, path, headers=headers, auth=AquariumAuth(self.token, self.domain), **kwargs)
+        response = await self.session.request(
+            typ,
+            path,
+            headers=headers,
+            auth=(self.token or "", self.domain or ""),
+            **kwargs,
+        )
 
         evaluate(response)
         if not stream:
@@ -216,25 +221,27 @@ class Aquarium(object):
 
         return value
 
-    def signin(self, email='', password=''):
+    async def signin(self, email="", password=""):
         """
         Alias of :func:`~aquarium.items.user.User.signin`
         """
-        return self.user.signin(email=email, password=password)
+        return await self.user.signin(email=email, password=password)
 
-    def connect(self, email='', password='', otp_code=''):
+    async def connect(self, email="", password="", otp_code=""):
         """
         Alias of :func:`~aquarium.items.user.User.connect`
         """
-        return self.user.connect(email=email, password=password, otp_code=otp_code)
+        return await self.user.connect(
+            email=email, password=password, otp_code=otp_code
+        )
 
-    def verify_otp(self, email='', challenge='', code=''):
+    async def verify_otp(self, email="", challenge="", code=""):
         """
         Alias of :func:`~aquarium.items.user.User.verify_otp`
         """
-        return self.user.verify_otp(email=email, challenge=challenge, code=code)
+        return await self.user.verify_otp(email=email, challenge=challenge, code=code)
 
-    def signout(self):
+    async def signout(self):
         """
         Sign out current user by clearing the stored authentication token
 
@@ -245,15 +252,15 @@ class Aquarium(object):
         """
         logger.info('Disconnect current user')
         logger.debug('Clear authentication token for logout')
-        self.user.signout()
+        await self.user.signout()
 
-    def logout(self):
+    async def logout(self):
         """
         Alias of :func:`~aquarium.aquarium.Aquarium.signout`
         """
-        self.signout()
+        await self.signout()
 
-    def me(self):
+    async def me(self):
         """
         Alias of :func:`~aquarium.aquarium.Aquarium.get_current_user`
 
@@ -261,9 +268,9 @@ class Aquarium(object):
         :returns:   A :class:`~aquarium.items.user.User` instance of the connected user.
         :rtype:     :class:`~aquarium.items.user.User` object
         """
-        return self.get_current_user()
+        return await self.get_current_user()
 
-    def get_current_user(self):
+    async def get_current_user(self):
         """
         Alias of :func:`~aquarium.items.user.User.get_current`
 
@@ -271,10 +278,10 @@ class Aquarium(object):
         :returns:   A :class:`~aquarium.items.user.User` instance of the connected user.
         :rtype:     :class:`~aquarium.items.user.User` object
         """
-        result=self.user.get_current()
+        result = await self.user.get_current()
         return result
 
-    def mine(self):
+    async def mine(self):
         """
         Alias of :func:`~aquarium.items.user.User.get_profile`
 
@@ -282,29 +289,29 @@ class Aquarium(object):
         :returns:   User, Usergroups and Organisations object
         :rtype:     Dict {user: :class:`~aquarium.items.user.User`, usergroups: [:class:`~aquarium.items.usergroup.Usergroup`], organisations: [:class:`~aquarium.items.organisation.Organisation`]}
         """
-        return self.user.get_profile()
+        return await self.user.get_profile()
 
-    def get_server_status(self):
+    async def get_server_status(self):
         """
         Gets the server status.
 
         :returns:   The server status
         :rtype:     dictionary
         """
-        result=self.do_request('GET', 'status')
+        result = await self.do_request("GET", "status")
         return result
 
-    def ping (self):
+    async def ping(self):
         """
         Ping Aquarium server
 
         :returns: Ping response: pong
         :rtype:   string
         """
-        ping = self.do_request('GET', 'ping', decoding=False)
+        ping = await self.do_request("GET", "ping", decoding=False)
         return ping.text
 
-    def get_users (self):
+    async def get_users(self):
         """
         Get all users
 
@@ -312,12 +319,12 @@ class Aquarium(object):
         :rtype:   List of :class:`~aquarium.items.user.User`
         """
 
-        users = self.do_request('GET', 'users')
+        users = await self.do_request("GET", "users")
 
         users = [self.cast(user) for user in users]
         return users
 
-    def create_user (self, email, name=None, aquarium_url=None):
+    async def create_user(self, email, name=None, aquarium_url=None):
         """
         Create a new user
 
@@ -333,21 +340,19 @@ class Aquarium(object):
         """
 
         payload = dict(email=email)
-        if name != None:
+        if name is not None:
             payload['name'] = name
 
         headers = {
             'origin': aquarium_url or self.api_url
         }
 
-        user = self.do_request(
-            'POST', 'users', json=payload, headers=headers)
+        user = await self.do_request("POST", "users", json=payload, headers=headers)
 
         user = self.cast(user)
         return user
 
-
-    def forgot_password(self, email, aquarium_url=None):
+    async def forgot_password(self, email, aquarium_url=None):
         """
         Start forgot password procedure. User will receive an email to reset its password.
 
@@ -367,11 +372,10 @@ class Aquarium(object):
             headers = {
                 'origin': aquarium_url or self.api_url
             }
-            self.do_request(
-            'POST', 'forgot', json=data, headers=headers)
+            await self.do_request("POST", "forgot", json=data, headers=headers)
             return True
 
-    def upload_file(self, path='', encoded=False):
+    async def upload_file(self, path="", encoded=False):
         """
         Uploads a file on the server
 
@@ -401,11 +405,11 @@ class Aquarium(object):
                 "x-file-encoded": "true"
             }
 
-        result = self.do_request('POST', 'upload', files=files, headers=headers)
+        result = await self.do_request("POST", "upload", files=files, headers=headers)
         file.close()
         return result
 
-    def query(self, meshql='', aliases={}):
+    async def query(self, meshql="", aliases={}):
         """
         Query entities
 
@@ -423,10 +427,10 @@ class Aquarium(object):
         logger.debug('Send query : meshql : %s / aliases : %r',
                      meshql, aliases)
         data=dict(query=meshql, aliases=aliases)
-        result=self.do_request('POST', 'query', json=data)
+        result = await self.do_request("POST", "query", json=data)
         return result
 
-    def get_file(self, file_path):
+    async def get_file(self, file_path):
         """
         Get stored file on Aquarium server
 
@@ -437,5 +441,5 @@ class Aquarium(object):
         :rtype:     list
         """
 
-        response = self.do_request('GET', file_path, decoding=False)
+        response = await self.do_request("GET", file_path, decoding=False)
         return response.content

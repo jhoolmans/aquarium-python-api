@@ -104,7 +104,7 @@ class Entity(object):
         if entity_data:
             self.data=DotMap(entity_data, _dynamic=(not bool(self.parent.strict_dotmap)))
 
-    def do_request(self, *args, **kwargs):
+    async def do_request(self, *args, **kwargs):
         """
         Execute a request
 
@@ -116,5 +116,5 @@ class Entity(object):
         :returns:   request response
         :rtype:  list or dictionary
         """
-        result=self.parent.do_request(*args, **kwargs)
+        result = await self.parent.do_request(*args, **kwargs)
         return result

@@ -8,7 +8,7 @@ class Task(Item):
     This class describes a Template object child of Item class.
     """
 
-    def assign_to(self, user_key=''):
+    async def assign_to(self, user_key=""):
         """
         Assign the task to user
 
@@ -18,11 +18,12 @@ class Task(Item):
         :returns:   Created assigned edge object
         :rtype:     :class:`~aquarium.edge.Edge`
         """
-        result = self.parent.edge.create(
-            type='Assigned', from_key=str(self._key), to_key=str(user_key))
+        result = await self.parent.edge.create(
+            type="Assigned", from_key=str(self._key), to_key=str(user_key)
+        )
         return result
 
-    def unassign_from(self, user_key=''):
+    async def unassign_from(self, user_key=""):
         """
         Unassign the task from user
 
@@ -32,17 +33,20 @@ class Task(Item):
         :returns:   Deleted assigned edge object
         :rtype:     :class:`~aquarium.edge.Edge`
         """
-        result = self.traverse(
-            meshql='# -($Assigned)> 0,1 $User AND item._key == "{user_key}" VIEW edge'.format(user_key=user_key))
+        result = await self.traverse(
+            meshql='# -($Assigned)> 0,1 $User AND item._key == "{user_key}" VIEW edge'.format(
+                user_key=user_key
+            )
+        )
 
         if len(result) > 0:
             assigned_edge = self.parent.cast(result[0])
-            assigned_edge.delete()
+            await assigned_edge.delete()
             return assigned_edge
         else:
             return None
 
-    def add_timelog(self, user_key, comment='', date='', duration=''):
+    async def add_timelog(self, user_key, comment="", date="", duration=""):
         """
         Add a timelog to the task
 
@@ -59,8 +63,8 @@ class Task(Item):
         :rtype:     dictionary {item: :class:`~aquarium.item.Item`, edge: :class:`~aquarium.edge.Edge`}
         """
 
-        if user_key == None:
-            user_key = self.parent.me()._key
+        if user_key is None:
+            user_key = await self.parent.me()._key
 
         data = dict(
             duration=duration,
@@ -68,10 +72,10 @@ class Task(Item):
             performedAt=date,
             performedBy=user_key
         )
-        result = self.append(type='Job', data=data)
+        result = await self.append(type="Job", data=data)
         return result
 
-    def get_statuses(self):
+    async def get_statuses(self):
         """
         Gets all the statuses for the task
 
@@ -79,7 +83,7 @@ class Task(Item):
         :rtype:     dictionary
         """
         query = "# <($Child, 40)- path.vertices[*].type NONE == 'User' -($Child)> $Properties VIEW item.data.tasks_status"
-        statuses = self.traverse(meshql=query)
+        statuses = await self.traverse(meshql=query)
         statuses_dct = dict()
 
         for status in statuses:
@@ -90,7 +94,7 @@ class Task(Item):
         result = statuses_dct or DEFAULT_STATUSES
         return result
 
-    def get_subtasks(self, status='', name='', is_completed=True):
+    async def get_subtasks(self, status="", name="", is_completed=True):
         """
         Gets the subtasks of the task
 
@@ -115,11 +119,11 @@ class Task(Item):
 
         query.append(')')
 
-        result = self.traverse(meshql=' '.join(query))
+        result = await self.traverse(meshql=" ".join(query))
         result = [self.parent.element(data) for data in result]
         return result
 
-    def get_dependencies(self, mode='BOTH'):
+    async def get_dependencies(self, mode="BOTH"):
         """
         Gets the dependencies of the task
 
@@ -139,11 +143,11 @@ class Task(Item):
             raise RuntimeError(
                 'Wrong value for "mode". Use "BOTH", "IN" or "OUT"')
 
-        result = self.traverse(meshql=query)
+        result = await self.traverse(meshql=query)
         result = [self.parent.element(data) for data in result]
         return result
 
-    def get_assigned_users(self):
+    async def get_assigned_users(self):
         """
         Gets all the assigned users to the task
 
@@ -151,11 +155,11 @@ class Task(Item):
         :rtype:     List of dictionary {item: :class:`~aquarium.items.user.User` | :class:`~aquarium.items.usergroup.Usergroup`, edge: :class:`~aquarium.edge.Edge}`
         """
         query = "# -($Assigned)> *"
-        result = self.traverse(meshql=query)
+        result = await self.traverse(meshql=query)
         result = [self.parent.element(data) for data in result]
         return result
 
-    def get_attachments(self):
+    async def get_attachments(self):
         """
         Gets all the task's attachments
 
@@ -163,6 +167,6 @@ class Task(Item):
         :rtype:     List of dictionary {item: :class:`~aquarium.item.Item` or subclass : :class:`~aquarium.items.asset.Asset` | :class:`~aquarium.items.project.Project` | :class:`~aquarium.items.shot.Shot` | :class:`~aquarium.items.task.Task` | :class:`~aquarium.items.template.Template` | :class:`~aquarium.items.user.User` | :class:`~aquarium.items.usergroup.Usergroup`, edge: :class:`~aquarium.edge.Edge`}
         """
         query = "# -($Attached)> *"
-        result = self.traverse(meshql=query)
+        result = await self.traverse(meshql=query)
         result = [self.parent.element(data) for data in result]
         return result

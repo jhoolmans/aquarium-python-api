@@ -25,7 +25,7 @@ class Item(Entity):
 
         return super(Item, self).to_dict()
 
-    def create(self, type='', data={}, path=None, encoded=False):
+    async def create(self, type="", data={}, path=None, encoded=False):
         """
         Create an item
 
@@ -50,7 +50,7 @@ class Item(Entity):
         """
 
         payload = dict(type=type, data=data)
-        result = self.do_request('POST', 'items', json=payload)
+        result = await self.do_request("POST", "items", json=payload)
         result = self.parent.cast(result)
 
         if path != None:
@@ -60,7 +60,17 @@ class Item(Entity):
                     result.data[key] = upload.data[key]
         return result
 
-    def append(self, type='', data={}, edge_type='Child', edge_data={}, apply_template=None, template_key=None, path=None, encoded=False):
+    async def append(
+        self,
+        type="",
+        data={},
+        edge_type="Child",
+        edge_data={},
+        apply_template=None,
+        template_key=None,
+        path=None,
+        encoded=False,
+    ):
         """
         Create and append a new item to the current one
 
@@ -106,19 +116,20 @@ class Item(Entity):
         if template_key:
             payload["templateKey"] = template_key
 
-        result = self.do_request(
-            'POST', 'items/'+self._key+'/append', json=payload)
+        result = await self.do_request(
+            "POST", f"items/{self._key}/append", json=payload
+        )
         result = self.parent.element(result)
 
-        if path != None:
+        if path is not None:
             upload = result.item.upload_file(path=path, encoded=encoded)
-            if upload != None:
+            if upload is not None:
                 for key in upload.data:
                     result.item.data[key] = upload.data[key]
 
         return result
 
-    def link(self, to_key, type='Child', data={}):
+    async def link(self, to_key, type="Child", data={}):
         """
         Create an edge from this item to the item in to_key param
 
@@ -136,9 +147,9 @@ class Item(Entity):
         :rtype:     :class:`~aquarium.edge.Edge`
         """
 
-        return self.parent.edge.create(type, self._key, to_key, data)
+        return await self.parent.edge.create(type, self._key, to_key, data)
 
-    def traverse(self, meshql='', aliases={}):
+    async def traverse(self, meshql="", aliases={}):
         """
         Execute a traverse from the current item
 
@@ -153,11 +164,10 @@ class Item(Entity):
         logger.debug('Send traverse : meshql : %s / aliases : %r',
                      meshql, aliases)
         data = dict(query=meshql, aliases=aliases)
-        result = self.do_request(
-            'POST', 'items/'+self._key+'/traverse', json=data)
+        result = await self.do_request("POST", f"items/{self._key}/traverse", json=data)
         return result
 
-    def traverse_trashed(self, meshql='', aliases={}):
+    async def traverse_trashed(self, meshql="", aliases={}):
         """
         Execute a traverse from the current item on trashed_items
 
@@ -172,11 +182,12 @@ class Item(Entity):
         logger.debug('Send traverse trashed_items : meshql : %s / aliases : %r',
                      meshql, aliases)
         data = dict(query=meshql, aliases=aliases)
-        result = self.do_request(
-            'POST', 'trashed_items/'+self._key+'/traverse', json=data)
+        result = await self.do_request(
+            "POST", f"trashed_items/{self._key}/traverse", json=data
+        )
         return result
 
-    def replace_data(self, data={}):
+    async def replace_data(self, data={}):
         """
         Replace the item data with new ones
 
@@ -192,13 +203,12 @@ class Item(Entity):
         """
         logger.debug('Replacing data on item %s with %r', self._key, data)
         data = dict(data=data)
-        result = self.do_request(
-            'PUT', 'items/'+self._key, json=data)
+        result = await self.do_request("PUT", "items/" + self._key, json=data)
 
         result = self.parent.cast(result)
         return result
 
-    def update_data(self, data={}, deep_merge=True):
+    async def update_data(self, data={}, deep_merge=True):
         """
         Update the item data by merging the existing ones with the new ones
 
@@ -215,12 +225,11 @@ class Item(Entity):
             data=data,
             deepMerge=deep_merge
         )
-        result = self.do_request(
-            'PATCH', 'items/'+self._key, json=data)
+        result = await self.do_request("PATCH", f"items/{self._key}", json=data)
         result = self.parent.cast(result)
         return result
 
-    def copy(self, parent_key=''):
+    async def copy(self, parent_key=""):
         """
         Copie the item into the parent
 
@@ -232,13 +241,12 @@ class Item(Entity):
         """
         logger.debug('Copy item %s into %s', self._key, parent_key)
         data = dict(targetKey=parent_key)
-        result = self.do_request(
-            'POST', 'items/'+self._key+'/copy', json=data)
+        result = await self.do_request("POST", f"items/{self._key}/copy", json=data)
 
         result = [self.parent.cast(data) for data in result]
         return result
 
-    def convert_to_template(self, parent_key=''):
+    async def convert_to_template(self, parent_key=""):
         """
         Convert an item and its hierarchy to a template into a parent
 
@@ -251,12 +259,13 @@ class Item(Entity):
         logger.debug('Converting item %s to template in %s',
                      self._key, parent_key)
         data = dict(parentKey=parent_key)
-        result = self.do_request(
-            'POST', 'items/'+self._key+'/convertToTemplate', json=data)
+        result = await self.do_request(
+            "POST", f"items/{self._key}/convertToTemplate", json=data
+        )
         result = self.parent.cast(result)
         return result
 
-    def apply_template(self, template_key=''):
+    async def apply_template(self, template_key=""):
         """
         Apply a template on the item
 
@@ -268,12 +277,13 @@ class Item(Entity):
         """
         logger.debug('Apply template %s on item %s', template_key, self._key)
         data = dict(templateKey=template_key)
-        result = self.do_request(
-            'POST', 'items/'+self._key+'/template', json=data)
+        result = await self.do_request(
+            "POST", "items/" + self._key + "/template", json=data
+        )
         result = self.parent.cast(result)
         return result
 
-    def reapply_template(self, template_key=None):
+    async def reapply_template(self, template_key=None):
         """
         Re-apply the specific template
 
@@ -283,19 +293,20 @@ class Item(Entity):
         :returns:   Item object
         :rtype:     :class:`~aquarium.item.Item` or subclass : :class:`~aquarium.items.asset.Asset` | :class:`~aquarium.items.project.Project` | :class:`~aquarium.items.shot.Shot` | :class:`~aquarium.items.task.Task` | :class:`~aquarium.items.template.Template` | :class:`~aquarium.items.user.User` | :class:`~aquarium.items.usergroup.Usergroup`
         """
-        if template_key == None:
+        if template_key is None:
             raise Deprecated("You can't use this function without providing the template_key you want to use.")
 
         logger.debug('Re-apply template %s on item %s', template_key, self._key)
-        result = self.do_request(
-            'POST', 'templates/{templateKey}/sync/{itemKey}'.format(
-                templateKey=template_key,
-                itemKey=self._key
-            ))
+        result = await self.do_request(
+            "POST",
+            "templates/{templateKey}/sync/{itemKey}".format(
+                templateKey=template_key, itemKey=self._key
+            ),
+        )
         result = self.parent.cast(result)
         return result
 
-    def get(self, populate=False, history=False):
+    async def get(self, populate=False, history=False):
         """
         Get item object with its _key
 
@@ -315,12 +326,13 @@ class Item(Entity):
 
         jsonify(params)
 
-        result = self.do_request('GET', 'items/{0}/'.format(
-            self._key), params=params)
+        result = await self.do_request(
+            "GET", "items/{0}/".format(self._key), params=params
+        )
         result = self.parent.cast(result)
         return result
 
-    def get_history(self, populate=False):
+    async def get_history(self, populate=False):
         """
         Get the previous item's data history
 
@@ -336,18 +348,19 @@ class Item(Entity):
 
         jsonify(params)
 
-        result = self.do_request(
-            'GET', 'items/{0}/history'.format(self._key), params=params)
+        result = await self.do_request(
+            "GET", "items/{0}/history".format(self._key), params=params
+        )
         result = [self.parent.cast(data) for data in result]
         return result
 
-    def get_versions(self, populate=False):
+    async def get_versions(self, populate=False):
         """
         Alias of :func:`~aquarium.items.item.get_history`
         """
-        return self.get_history(populate)
+        return await self.get_history(populate)
 
-    def get_shortest_path(self, key=''):
+    async def get_shortest_path(self, key=""):
         """
         Get the shortest path between the current item and the item _key
 
@@ -357,12 +370,19 @@ class Item(Entity):
         :returns:   List of item Object
         :rtype:     list of :class:`~aquarium.item.Item` or subclass : :class:`~aquarium.items.asset.Asset` | :class:`~aquarium.items.project.Project` | :class:`~aquarium.items.shot.Shot` | :class:`~aquarium.items.task.Task` | :class:`~aquarium.items.template.Template` | :class:`~aquarium.items.user.User` | :class:`~aquarium.items.usergroup.Usergroup`
         """
-        result = self.do_request(
-            'GET', 'items/'+self._key+'/path/'+key)
+        result = await self.do_request("GET", "items/" + self._key + "/path/" + key)
         result = [self.parent.cast(data) for data in result]
         return result
 
-    def get_permissions(self, sort=None, populate=False, offset=0, limit=50, depth=1, includeMembers=False):
+    async def get_permissions(
+        self,
+        sort=None,
+        populate=False,
+        offset=0,
+        limit=50,
+        depth=1,
+        includeMembers=False,
+    ):
         """
         Gets the permissions of the item
 
@@ -392,12 +412,13 @@ class Item(Entity):
 
         jsonify(params)
 
-        result = self.do_request('GET', 'items/{0}/permissions'.format(
-            self._key), params=params)
+        result = await self.do_request(
+            "GET", "items/{0}/permissions".format(self._key), params=params
+        )
         result = [self.parent.element(data) for data in result]
         return result
 
-    def get_permissions_flat(self, account_key=None):
+    async def get_permissions_flat(self, account_key=None):
         """
         Get the list of users and their access to an item.
 
@@ -417,12 +438,12 @@ class Item(Entity):
 
         jsonify(params)
 
-        result = self.do_request(
+        result = await self.do_request(
             "GET", "items/{0}/permissions/flat".format(self._key), params=params
         )
         return result
 
-    def create_permission(self, participant_key, permissions, propagate = True):
+    async def create_permission(self, participant_key, permissions, propagate=True):
         """
         Create a new permission on an item. It's like sharing an item to an existing user, usergroup or organisation.
 
@@ -466,12 +487,13 @@ class Item(Entity):
             },
             'propagate': propagate
         }
-        result = self.do_request(
-            'POST', 'items/{0}/permissions'.format(self._key), json=data)
+        result = await self.do_request(
+            "POST", "items/{0}/permissions".format(self._key), json=data
+        )
         result['user'] = self.parent.cast(result['user'])
         return result
 
-    def remove_permission(self, participant_key):
+    async def remove_permission(self, participant_key):
         """
         Remove an existing permission from an item. It's like unsharing an item to an existing user, usergroup or organisation.
 
@@ -484,12 +506,13 @@ class Item(Entity):
         data = {
             'userKey': participant_key
         }
-        result = self.do_request(
-            'DELETE', 'items/{0}/permissions'.format(self._key), json=data)
+        result = await self.do_request(
+            "DELETE", "items/{0}/permissions".format(self._key), json=data
+        )
         result['user'] = self.parent.cast(result['user'])
         return result
 
-    def update_permission(self, participant_key, permissions, propagate=True):
+    async def update_permission(self, participant_key, permissions, propagate=True):
         """
         Update an existing permission on an item.
 
@@ -514,12 +537,13 @@ class Item(Entity):
             'propagate': propagate
 
         }
-        result = self.do_request(
-            'PATCH', 'items/{0}/permissions'.format(self._key), json=data)
+        result = await self.do_request(
+            "PATCH", "items/{0}/permissions".format(self._key), json=data
+        )
         result['user'] = self.parent.cast(result['user'])
         return result
 
-    def get_parents(self, limit = 50, offset = 0):
+    async def get_parents(self, limit=50, offset=0):
         """
         Gets the parents of the item
 
@@ -540,7 +564,9 @@ class Item(Entity):
         result = [self.parent.element(data) for data in result]
         return result
 
-    def get_children(self, show_hidden=False, types=None, names=None, limit=50, offset=0):
+    async def get_children(
+        self, show_hidden=False, types=None, names=None, limit=50, offset=0
+    ):
         """
         Gets the children of the item
 
@@ -564,14 +590,14 @@ class Item(Entity):
         )]
         aliases = dict()
 
-        if types == None:
+        if types is None:
             query.append('*')
         else:
             query.append('item.type IN @types')
             if not isinstance(types, list): types=[types]
             aliases['types'] = types
 
-        if names != None:
+        if names is not None:
             query.append('AND item.data.name IN @names')
             if not isinstance(names, list): names=[names]
             aliases['names'] = names
@@ -579,11 +605,11 @@ class Item(Entity):
         if not show_hidden:
             query.append('AND edge.data.isHidden != true')
 
-        result = self.traverse(meshql=' '.join(query), aliases=aliases)
+        result = await self.traverse(meshql=" ".join(query), aliases=aliases)
         result = [self.parent.element(data) for data in result]
         return result
 
-    def get_trash(self, meshql='# -($Child)> *'):
+    async def get_trash(self, meshql="# -($Child)> *"):
         """
         Gets the trashed items
 
@@ -593,11 +619,11 @@ class Item(Entity):
         :returns:   List of trashed item and edge object
         :rtype:     list of {item: :class:`~aquarium.item.Item`, edge: :class:`~aquarium.edge.Edge`}
         """
-        result = self.traverse_trashed(meshql)
+        result = await self.traverse_trashed(meshql)
         result = [self.parent.element(data) for data in result]
         return result
 
-    def move(self, old_parent_key=None, new_parent_key=None):
+    async def move(self, old_parent_key=None, new_parent_key=None):
         """
         Move item from old parent to new parent
 
@@ -616,12 +642,11 @@ class Item(Entity):
             newParentKey=new_parent_key
         )
 
-        result = self.do_request(
-            'PUT', 'items/'+self._key+'/move', json=data)
+        result = await self.do_request("PUT", "items/" + self._key + "/move", json=data)
         result = self.parent.element(result)
         return result
 
-    def trash(self):
+    async def trash(self):
         """
         Move item to the trash
 
@@ -629,14 +654,13 @@ class Item(Entity):
         :rtype:     dictionary
         """
         logger.debug('Trash item %s', self._key)
-        result = self.do_request(
-            'DELETE', 'items/{itemKey}/trash'.format(
-                itemKey=self._key
-            ))
+        result = await self.do_request(
+            "DELETE", "items/{itemKey}/trash".format(itemKey=self._key)
+        )
         result = self.parent.element(result)
         return result
 
-    def restore(self):
+    async def restore(self):
         """
         Restore an item from trash
 
@@ -644,14 +668,13 @@ class Item(Entity):
         :rtype:     :class:`~aquarium.item.Item`
         """
         logger.debug('Restore item %s', self._key)
-        result = self.do_request(
-            'POST', 'trashed_items/{itemKey}/restore'.format(
-                itemKey=self._key
-            ))
+        result = await self.do_request(
+            "POST", "trashed_items/{itemKey}/restore".format(itemKey=self._key)
+        )
         result = self.parent.cast(result)
         return result
 
-    def delete(self):
+    async def delete(self):
         """
         Delete the item.
 
@@ -662,11 +685,10 @@ class Item(Entity):
         :rtype:     dictionary
         """
         logger.debug('Delete item %s', self._key)
-        result = self.do_request(
-            'DELETE', 'trashed_items/'+self._key)
+        result = await self.do_request("DELETE", "trashed_items/" + self._key)
         return result
 
-    def upload_file(self, path='', data = {}, message = None, encoded = False):
+    async def upload_file(self, path="", data={}, message=None, encoded=False):
         """
         Upload a file on the item
 
@@ -704,13 +726,14 @@ class Item(Entity):
             data=(None, json.dumps(data), 'text/plain'),
             message=(None, message, 'text/plain')
         )
-        result = self.do_request(
-            'POST', 'items/'+self._key+'/upload', files=files, headers=headers)
+        result = await self.do_request(
+            "POST", "items/" + self._key + "/upload", files=files, headers=headers
+        )
         file.close()
         result = self.parent.cast(result)
         return result
 
-    def download_file(self, path, versionKey=None):
+    async def download_file(self, path, versionKey=None):
         """
         Download the item's file to the path
 
@@ -725,8 +748,7 @@ class Item(Entity):
         if (versionKey != None):
             url = '{url}?versionKey=${versionKey}'.format(versionKey=versionKey)
 
-        result = self.do_request(
-            'GET', url, decoding=False)
+        result = await self.do_request("GET", url, decoding=False)
 
         if (os.path.isdir(path)):
             content_disposition = result.headers['content-disposition']
@@ -741,7 +763,7 @@ class Item(Entity):
 
         return path
 
-    def import_json(self, content={}):
+    async def import_json(self, content={}):
         """
         Import item hierarchy from json content
 
@@ -751,21 +773,22 @@ class Item(Entity):
         :returns:   Dictionary of imported items and edges
         :rtype:     dictionary
         """
-        result = self.do_request(
-            'POST', 'items/'+self._key+'/import/json', json=content)
+        result = await self.do_request(
+            "POST", "items/" + self._key + "/import/json", json=content
+        )
         return result
 
-    def export_json(self):
+    async def export_json(self):
         """
         Export item hierarchy to json
 
         :returns:   Exported items and edges
         :rtype:     dictionary
         """
-        result = self.do_request('GET', 'items/'+self._key+'/export/json')
+        result = await self.do_request("GET", "items/" + self._key + "/export/json")
         return result
 
-    def compare(self, key=''):
+    async def compare(self, key=""):
         """
         Compare the item with a given item
 
@@ -775,6 +798,6 @@ class Item(Entity):
         :returns:   The comparison result
         :rtype:     dictionary
         """
-        result = self.do_request('POST', 'items/'+self._key+'/compare/'+key)
+        result = await self.do_request("POST", "items/" + self._key + "/compare/" + key)
         result = self.parent.element(result)
         return result
