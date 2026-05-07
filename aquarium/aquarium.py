@@ -80,12 +80,15 @@ class Aquarium(object):
     :vartype utils: :class:`~aquarium.utils.Utils`
     """
 
-    def __init__(self, api_url='', token=None, api_version='v1', domain=None, strict_dotmap=False):
+    def __init__(self, api_url='', token=None, api_version='v1', domain=None, strict_dotmap=False, client=None):
         """
         Constructs a new instance.
         """
         # Session
-        self.session = httpx.AsyncClient(follow_redirects=True)
+        if client:
+            self.session = client
+        else:
+            self.session = httpx.AsyncClient(follow_redirects=True)
 
         self.api_url=api_url
         self.api_version=api_version
