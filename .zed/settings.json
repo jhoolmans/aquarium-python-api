@@ -1,0 +1,5 @@
+{
+  // Disable format-on-save so edits (e.g. while resolving merges) don't
+  // reformat whole files and introduce unrelated whitespace churn.
+  "format_on_save": "off"
+}

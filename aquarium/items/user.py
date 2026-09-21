@@ -155,7 +155,7 @@ class User(Item):
         :returns:   User object
         :rtype:     :class:`~aquarium.items.user.User`
         """
-        result = await self.get_profile().user
+        result = (await self.get_profile()).user
         return result
 
     async def get_tasks(

@@ -17,6 +17,7 @@ class Asset(Item):
         override_media=True,
         message=None,
         encoded=False,
+        edge_data=None,
     ):
         """
         Uploads new media version on asset task
@@ -35,6 +36,8 @@ class Asset(Item):
         :type       message:        string
         :param      encoded:  If the video file is already encoded for the web and shouldn't be re-process by the server, optional
         :type       encoded:  boolean
+        :param      edge_data:    The edge data of the new media item. Use `edge_data.weight: [integer]` to define the order of the media (ascending order: lower value mean first). Try to use high values above 100000 and don't use close values like 100000 and 100001, use 100000 and 110000.
+        :type       edge_data:    dictionary, optional
 
         :returns:   Updated media object
         :rtype:     dictionary
@@ -64,7 +67,7 @@ class Asset(Item):
 
         if version_name is None:
             if not media_key or not override_media:
-                return task.append(type='Media', data=data, path=path, encoded=encoded)
+                return task.append(type='Media', data=data, edge_data=edge_data, path=path, encoded=encoded)
             else:
                 return await self.parent.item(media_key).upload_file(
                     path=path, data=data, message=message, encoded=encoded
@@ -93,15 +96,15 @@ class Asset(Item):
                         )
                     else:
                         return await version.append(
-                            type="Media", data=data, path=path, encoded=encoded
+                            type="Media", data=data, edge_data=edge_data, path=path, encoded=encoded
                         )
                 else:
                     return await version.append(
-                        type="Media", data=data, path=path, encoded=encoded
+                        type="Media", data=data, edge_data=edge_data, path=path, encoded=encoded
                     )
             else:
                 return await version.append(
-                    type="Media", data=data, path=path, encoded=encoded
+                    type="Media", data=data, edge_data=edge_data, path=path, encoded=encoded
                 )
 
     async def get_tasks(self, task_name="", task_status=""):

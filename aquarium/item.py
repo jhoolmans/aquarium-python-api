@@ -88,7 +88,7 @@ class Item(Entity):
         :type       edge_data:       dictionary, optional
         :param      apply_template:  Do apply template ?
         :type       apply_template:  boolean, optional
-        :param      template_key:    The template key to apply. If no template key, `automatic context's template <https://docs.aquarium.app/web/items/template/>`_ will be used.
+        :param      template_key:    The template key to apply. If no template key, `automatic context's template <https://aquarium.app/docs/web/items/template/>`_ will be used.
         :type       template_key:    string, optional
         :param      path:            File path you want to upload on the appended item
         :type       path:            string, optional
@@ -102,13 +102,17 @@ class Item(Entity):
         payload = {
             "item": {
                 "type": type,
-                "data": data
             },
             "edge": {
                 "type": edge_type,
-                "data": edge_data
             }
         }
+
+        if data is not None:
+            payload["item"]["data"] = data
+
+        if edge_data is not None:
+            payload["edge"]["data"] = edge_data
 
         if apply_template is not None:
             payload["applyTemplate"] = apply_template
@@ -685,7 +689,7 @@ class Item(Entity):
         :rtype:     dictionary
         """
         logger.debug('Delete item %s', self._key)
-        result = await self.do_request("DELETE", "trashed_items/" + self._key)
+        result = await self.do_request("DELETE", "items/" + self._key)
         return result
 
     async def upload_file(self, path="", data={}, message=None, encoded=False):
