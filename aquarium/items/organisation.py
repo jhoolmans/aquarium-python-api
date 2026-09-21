@@ -106,7 +106,7 @@ class Organisation(Item):
         :rtype:     :class:`~aquarium.items.user.User`
         """
 
-        payload = dict(userKey=user_key)
+        payload = dict(userKey=str(user_key))
 
         member = await self.do_request(
             "POST",

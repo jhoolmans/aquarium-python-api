@@ -70,7 +70,7 @@ class Task(Item):
             duration=duration,
             comment=comment,
             performedAt=date,
-            performedBy=user_key
+            performedBy=str(user_key)
         )
         result = await self.append(type="Job", data=data)
         return result

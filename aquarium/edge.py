@@ -47,8 +47,8 @@ class Edge(Entity):
         :returns:   Edge object
         :rtype:     :class:`~aquarium.edge.Edge`
         """
-        payload = dict(fromKey=from_key,
-                       toKey=to_key,
+        payload = dict(fromKey=str(from_key),
+                       toKey=str(to_key),
                        type=type,
                        data=data)
 

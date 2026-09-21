@@ -244,7 +244,7 @@ class Item(Entity):
         :rtype:     List of :class:`~aquarium.item.Item` or subclass : :class:`~aquarium.items.asset.Asset` | :class:`~aquarium.items.project.Project` | :class:`~aquarium.items.shot.Shot` | :class:`~aquarium.items.task.Task` | :class:`~aquarium.items.template.Template` | :class:`~aquarium.items.user.User` | :class:`~aquarium.items.usergroup.Usergroup`
         """
         logger.debug('Copy item %s into %s', self._key, parent_key)
-        data = dict(targetKey=parent_key)
+        data = dict(targetKey=str(parent_key))
         result = await self.do_request("POST", f"items/{self._key}/copy", json=data)
 
         result = [self.parent.cast(data) for data in result]
@@ -262,7 +262,7 @@ class Item(Entity):
         """
         logger.debug('Converting item %s to template in %s',
                      self._key, parent_key)
-        data = dict(parentKey=parent_key)
+        data = dict(parentKey=str(parent_key))
         result = await self.do_request(
             "POST", f"items/{self._key}/convertToTemplate", json=data
         )
@@ -280,7 +280,7 @@ class Item(Entity):
         :rtype:     :class:`~aquarium.item.Item` or subclass : :class:`~aquarium.items.asset.Asset` | :class:`~aquarium.items.project.Project` | :class:`~aquarium.items.shot.Shot` | :class:`~aquarium.items.task.Task` | :class:`~aquarium.items.template.Template` | :class:`~aquarium.items.user.User` | :class:`~aquarium.items.usergroup.Usergroup`
         """
         logger.debug('Apply template %s on item %s', template_key, self._key)
-        data = dict(templateKey=template_key)
+        data = dict(templateKey=str(template_key))
         result = await self.do_request(
             "POST", "items/" + self._key + "/template", json=data
         )
@@ -304,7 +304,7 @@ class Item(Entity):
         result = await self.do_request(
             "POST",
             "templates/{templateKey}/sync/{itemKey}".format(
-                templateKey=template_key, itemKey=self._key
+                templateKey=str(template_key), itemKey=str(self._key)
             ),
         )
         result = self.parent.cast(result)
@@ -374,7 +374,7 @@ class Item(Entity):
         :returns:   List of item Object
         :rtype:     list of :class:`~aquarium.item.Item` or subclass : :class:`~aquarium.items.asset.Asset` | :class:`~aquarium.items.project.Project` | :class:`~aquarium.items.shot.Shot` | :class:`~aquarium.items.task.Task` | :class:`~aquarium.items.template.Template` | :class:`~aquarium.items.user.User` | :class:`~aquarium.items.usergroup.Usergroup`
         """
-        result = await self.do_request("GET", "items/" + self._key + "/path/" + key)
+        result = await self.do_request("GET", f"items/{self._key}/path/{key}")
         result = [self.parent.cast(data) for data in result]
         return result
 
@@ -438,7 +438,7 @@ class Item(Entity):
         params = dict()
 
         if account_key is not None:
-            params["accountKey"] = account_key
+            params["accountKey"] = str(account_key)
 
         jsonify(params)
 
@@ -485,7 +485,7 @@ class Item(Entity):
         :rtype:     dict
         """
         data = {
-            'userKey': participant_key,
+            'userKey': str(participant_key),
             'data': {
                 'permissions': permissions
             },
@@ -508,7 +508,7 @@ class Item(Entity):
         :rtype:     dict
         """
         data = {
-            'userKey': participant_key
+            'userKey': str(participant_key)
         }
         result = await self.do_request(
             "DELETE", "items/{0}/permissions".format(self._key), json=data
@@ -534,7 +534,7 @@ class Item(Entity):
         :rtype:     dict
         """
         data = {
-            'userKey': participant_key,
+            'userKey': str(participant_key),
             'data': {
                 'permissions': permissions
             },
@@ -642,8 +642,8 @@ class Item(Entity):
         logger.debug('Move item %s from parent %s to %s',
                      self._key, old_parent_key, new_parent_key)
         data = dict(
-            oldParentKey=old_parent_key,
-            newParentKey=new_parent_key
+            oldParentKey=str(old_parent_key) if old_parent_key is not None else None,
+            newParentKey=str(new_parent_key) if new_parent_key is not None else None
         )
 
         result = await self.do_request("PUT", "items/" + self._key + "/move", json=data)
@@ -802,6 +802,6 @@ class Item(Entity):
         :returns:   The comparison result
         :rtype:     dictionary
         """
-        result = await self.do_request("POST", "items/" + self._key + "/compare/" + key)
+        result = await self.do_request("POST", f"items/{self._key}/compare/{key}")
         result = self.parent.element(result)
         return result
