@@ -131,7 +131,7 @@ class Aquarium(object):
 
         stream=False
         if 'stream' in kwargs:
-            stream=kwargs['stream']
+            stream=kwargs.pop('stream')
 
         decoding=True
         if 'decoding' in kwargs:
@@ -160,12 +160,21 @@ class Aquarium(object):
             path = urljoin(path, self.api_version)
 
         logger.debug('Send request : %s %s', typ, path)
-        response = await self.session.request(
-            typ,
-            path,
-            headers=headers,
-            **kwargs,
-        )
+        if stream:
+            request = self.session.build_request(
+                typ,
+                path,
+                headers=headers,
+                **kwargs,
+            )
+            response = await self.session.send(request, stream=True)
+        else:
+            response = await self.session.request(
+                typ,
+                path,
+                headers=headers,
+                **kwargs,
+            )
 
         evaluate(response)
         if not stream:
